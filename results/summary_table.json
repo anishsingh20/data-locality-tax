@@ -1,0 +1,26 @@
+{
+  "A_same_dc_vpc": {
+    "tcp_rtt_p50_ms": 2.43,
+    "retrieval_p50_k5_ms": 1.9,
+    "retrieval_p95_k5_ms": 3.51,
+    "retrieval_p50_k100_ms": 11.37,
+    "cold_first_call_k5_ms": 111.34,
+    "k20_p50_ms": 1.75
+  },
+  "B1_nyc_sfo_public": {
+    "tcp_rtt_p50_ms": 68.63,
+    "retrieval_p50_k5_ms": 66.97,
+    "retrieval_p95_k5_ms": 69.55,
+    "retrieval_p50_k100_ms": 70.11,
+    "cold_first_call_k5_ms": 717.91,
+    "k20_p50_ms": 61.03
+  },
+  "B2_nyc_sfo_peered_vpc": {
+    "tcp_rtt_p50_ms": 67.73,
+    "retrieval_p50_k5_ms": 69.9,
+    "retrieval_p95_k5_ms": 70.57,
+    "retrieval_p50_k100_ms": 75.44,
+    "cold_first_call_k5_ms": 668.87,
+    "k20_p50_ms": 76.54
+  }
+}

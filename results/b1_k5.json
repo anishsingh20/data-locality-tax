@@ -1,0 +1,14 @@
+{
+  "mode": "pgvector",
+  "k": 5,
+  "dim": 768,
+  "cold_connection_first_call_ms": 717.91,
+  "pooled": {
+    "n": 75,
+    "p50_ms": 66.97,
+    "p95_ms": 69.55,
+    "p99_ms": 72.24,
+    "mean_ms": 67.45
+  },
+  "timestamp": "2026-08-10T10:05:08Z"
+}

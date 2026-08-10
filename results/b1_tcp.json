@@ -1,0 +1,14 @@
+{
+  "mode": "tcp",
+  "host": "locality-tax-pg-sfo3-do-user-19451120-0.i.db.ondigitalocean.com",
+  "port": 25060,
+  "summary": {
+    "n": 75,
+    "p50_ms": 68.63,
+    "p95_ms": 76.2,
+    "p99_ms": 77.7,
+    "mean_ms": 67.93
+  },
+  "note": "TCP connect approximates one network round trip, no DB work",
+  "timestamp": "2026-08-10T10:04:47Z"
+}

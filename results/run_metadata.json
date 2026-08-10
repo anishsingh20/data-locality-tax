@@ -1,0 +1,59 @@
+{
+  "run_date_utc": "2026-08-10",
+  "window": "2026-08-10T10:04:37Z to 2026-08-10T10:05:45Z",
+  "client": {
+    "droplet_id": 591279391,
+    "name": "locality-tax-bench-nyc3",
+    "region": "nyc3",
+    "size": "s-2vcpu-4gb",
+    "image": "ubuntu-24-04-x64",
+    "public_ip": "45.55.60.167",
+    "tags": ["created-by-anish-for-testing-purposes", "data-locality-tax"]
+  },
+  "clusters": {
+    "arm_a": {
+      "id": "8be8d755-53e2-4251-8d8c-2a6493ebf8e8",
+      "name": "locality-tax-pg-nyc3",
+      "engine": "pg",
+      "version": "16",
+      "region": "nyc3",
+      "size": "db-s-1vcpu-1gb",
+      "path": "private hostname over same-DC VPC",
+      "corpus": "100000 synthetic vectors, dim=768, HNSW cosine"
+    },
+    "arm_b": {
+      "id": "7f9b2142-1129-4708-9e32-8197efd7513b",
+      "name": "locality-tax-pg-sfo3",
+      "engine": "pg",
+      "version": "16",
+      "region": "sfo3",
+      "size": "db-s-1vcpu-1gb",
+      "paths": {
+        "b1": "public hostname over internet",
+        "b2": "private hostname over VPC peering nyc3-sfo3"
+      },
+      "corpus": "100000 synthetic vectors, dim=768, HNSW cosine (identical load script)"
+    }
+  },
+  "vpc_peering": {
+    "id": "053f1a2d-3552-45bf-b0d0-3d9a6900bd3e",
+    "name": "locality-tax-nyc3-sfo3",
+    "status": "ACTIVE",
+    "vpcs": ["default-nyc3", "default-sfo3"]
+  },
+  "not_run": {
+    "b3_sgp": "Account hit maximum database cluster limit when creating locality-tax-pg-sgp1 (HTTP 412).",
+    "arm_c_saas": "No third-party SaaS vector store credential available in this run; left for a follow-up."
+  },
+  "physics_floors_ms": {
+    "same_dc": 0.01,
+    "nyc_sfo": 41.3,
+    "nyc_sgp": 153.3
+  },
+  "harness": {
+    "trials": 75,
+    "warmup": 10,
+    "dims": 768,
+    "k_values": [5, 20, 100]
+  }
+}
