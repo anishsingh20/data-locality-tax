@@ -1,8 +1,6 @@
 # Methods
 
-This repository is the evidence base for a measurement study of retrieval latency when a DigitalOcean Managed PostgreSQL (pgvector) cluster sits in a different region from the Droplet that issues the query.
-
-Nothing in this file is a marketing claim. If prose and JSON disagree, trust `results/*.json`.
+Canonical write-up of this study: [README.md](README.md). This file is the protocol in long form. If prose and JSON disagree, trust `results/*.json`.
 
 ## Question
 
