@@ -2,12 +2,12 @@
 
 **A measurement study of how much RAG retrieval latency you pay when a DigitalOcean Managed PostgreSQL (pgvector) cluster sits in a different region from the Droplet issuing queries.**
 
-This repository is the evidence base: harness, load SQL, raw per-cell JSON, and figures drawn from those files. Companion article: *"The Data Locality Tax: What a Wrong-Region Vector DB Costs Your RAG Pipeline"*.
+This repository is the evidence base: harness, load SQL, raw per-cell JSON, and figures drawn from those files.
 
 | | |
 | --- | --- |
 | **Run** | 2026-08-10, 10:04:37–10:05:45 UTC |
-| **Client** | Droplet `locality-tax-bench-nyc3` (`s-2vcpu-4gb`, Ubuntu 24.04), **NYC3** |
+| **Client** | Droplet (`s-2vcpu-4gb`, Ubuntu 24.04), **NYC3** |
 | **Arm A** | Managed PostgreSQL 16 + pgvector in **NYC3**, private hostname / same-DC VPC |
 | **Arm B1** | Identical cluster in **SFO3**, public hostname |
 | **Arm B2** | Same SFO3 cluster, private hostname over VPC peering |
