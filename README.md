@@ -1,79 +1,114 @@
-# The Data Locality Tax — Measured Retrieval Latency Across Regions
+# The Data Locality Tax: measured retrieval latency across DigitalOcean regions
 
-**A reproducible harness measuring how much RAG retrieval latency you pay when a DigitalOcean Managed PostgreSQL (pgvector) cluster sits in a different region from the Droplet issuing queries.**
+**A measurement study of how much RAG retrieval latency you pay when a DigitalOcean Managed PostgreSQL (pgvector) cluster sits in a different region from the Droplet issuing queries.**
 
-- **Run date:** August 10, 2026, ~10:04–10:05 UTC (one suite window)
-- **Client:** DigitalOcean Droplet `locality-tax-bench-nyc3` (`s-2vcpu-4gb`, Ubuntu 24.04), **NYC3**, public IP `45.55.60.167`
-- **Arm A:** Managed PostgreSQL 16 + pgvector in **NYC3**, queried over the **private hostname / same-DC VPC**
-- **Arm B:** Identical Managed PostgreSQL 16 + pgvector in **SFO3**
-  - **B1:** public hostname over the internet
-  - **B2:** private hostname over **VPC peering** `locality-tax-nyc3-sfo3`
-- **Corpus:** 100,000 synthetic 768-d vectors, HNSW (`vector_cosine_ops`), identical load script on both clusters
-- **Trials:** 75 measured + 10 warmup per cell; cold-connection first call recorded separately
-- **Not run in this window:** Arm B3 (NYC→SGP) hit the account database-cluster limit; Arm C (third-party SaaS) had no credentials available
+This repository is the evidence base: harness, load SQL, raw per-cell JSON, and figures drawn from those files. Companion article: *"The Data Locality Tax: What a Wrong-Region Vector DB Costs Your RAG Pipeline"*.
 
-This repository is the evidence base for the companion article *"The Data Locality Tax: What a Wrong-Region Vector DB Costs Your RAG Pipeline"* (DigitalOcean Community draft).
+| | |
+| --- | --- |
+| **Run** | 2026-08-10, 10:04:37–10:05:45 UTC |
+| **Client** | Droplet `locality-tax-bench-nyc3` (`s-2vcpu-4gb`, Ubuntu 24.04), **NYC3** |
+| **Arm A** | Managed PostgreSQL 16 + pgvector in **NYC3**, private hostname / same-DC VPC |
+| **Arm B1** | Identical cluster in **SFO3**, public hostname |
+| **Arm B2** | Same SFO3 cluster, private hostname over VPC peering |
+| **Corpus** | 100,000 synthetic 768-d vectors, HNSW cosine, identical load script |
+| **Trials** | 75 measured + 10 warmup per cell |
 
-Tags on all provisioned resources: `created-by-anish-for-testing-purposes`, `data-locality-tax`.
+Full protocol: [METHODS.md](METHODS.md). Raw cells: [results/](results/). Plot code: [analysis/plot_results.py](analysis/plot_results.py).
 
 ---
 
-## Headline measured table
+## Headline
 
-Physics floors (great-circle / fiber, ~200,000 km/s): same-DC &lt; 0.01 ms; NYC–SFO ≥ **41.3 ms**. Real paths must sit at or above those floors.
+Same query, same index, same corpus. The only variable was the path.
 
-| Arm | Path | TCP RTT probe p50 | Retrieval p50 (k=5) | Retrieval p95 (k=5) | Retrieval p50 (k=100) | Cold-connection first call (k=5) |
+![Pooled retrieval p50 at k=5](figures/fig-01-retrieval-p50-k5.png)
+
+*Figure 1. Median pooled search, k=5. Arm A 1.90 ms. Arm B1 66.97 ms (35×). Arm B2 69.90 ms. Lower is better.*
+
+| Arm | Path | TCP RTT p50 | Retrieval p50 (k=5) | Retrieval p95 (k=5) | Retrieval p50 (k=100) | Cold first call (k=5) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| A | Same DC, VPC (NYC3→NYC3 private) | **2.43 ms** | **1.90 ms** | 3.51 ms | 11.37 ms | 111.34 ms |
-| B1 | NYC3→SFO3, public | **68.63 ms** | **66.97 ms** | 69.55 ms | 70.11 ms | 717.91 ms |
-| B2 | NYC3→SFO3, peered VPC | **67.73 ms** | **69.90 ms** | 70.57 ms | 75.44 ms | 668.87 ms |
-| B3 | NYC→SGP, public | *not run — cluster limit* | | | | |
-| C | Third-party SaaS | *not run — no SaaS creds* | | | | |
-
-### What the numbers say
-
-1. **Same-DC VPC is the floor.** Arm A TCP probe p50 is 2.43 ms; pooled retrieval at k=5 is 1.90 ms. That is the rung every other path should be priced against.
-2. **Continental misplacement pays ~35× on pooled k=5.** B1 pooled retrieval p50 (66.97 ms) vs A (1.90 ms) is a ~35× tax on the steady-state path — and the TCP probe alone (68.63 ms) already sits ~27 ms above the 41.3 ms physics floor, which is expected route overhead.
-3. **Peering does not erase geography.** B2 (peered private hostname) is within a few milliseconds of B1 on every column. Privacy and egress accounting change; the speed-of-light bill does not.
-4. **Cold connections multiply the tax.** B1 cold first call is 717.91 ms vs 66.97 ms pooled — roughly an order of magnitude — matching the article’s TCP+TLS handshake arithmetic on a cross-region RTT.
-5. **k=100 vs k=5 separates more on the local arm** (11.37 vs 1.90 ms) than on the distant arms (70 vs 67 ms), where the network floor dominates the payload effect in this corpus size.
+| A | Same DC, VPC (NYC3 private) | **2.43 ms** | **1.90 ms** | 3.51 ms | 11.37 ms | 111.34 ms |
+| B1 | NYC3 → SFO3, public | **68.63 ms** | **66.97 ms** | 69.55 ms | 70.11 ms | 717.91 ms |
+| B2 | NYC3 → SFO3, peered VPC | **67.73 ms** | **69.90 ms** | 70.57 ms | 75.44 ms | 668.87 ms |
+| B3 | NYC → SGP, public | *not run* | | | | |
+| C | Third-party SaaS | *not run* | | | | |
 
 ---
 
-## Repository layout
+## What the run showed
 
-```
-harness/
-  locality_bench.py   # TCP probe + pgvector modes (from the article)
-  load_corpus.sql     # 100k × 768-d synthetic vectors + HNSW index
-results/
-  a_*.json, b1_*.json, b2_*.json
-  summary_table.json
-  run_metadata.json   # infra IDs, regions, disclosures (no passwords)
-requirements.txt
-```
+1. **Same-DC VPC is the floor.** Arm A TCP p50 was 2.43 ms; pooled k=5 was 1.90 ms.
+2. **A continent costs about 35× on pooled k=5.** B1 was 66.97 ms. The TCP probe alone (68.63 ms) already sat ~27 ms above the 41.3 ms NYC–SFO physics floor.
+3. **Peering does not erase geography.** B2 matched B1 within a few milliseconds on every pooled column.
+4. **On the long path, retrieval tracks TCP.** The index walk is not the bill you are paying.
+5. **Cold connections multiply the tax.** B1 cold first call was 717.91 ms versus 66.97 ms pooled.
+6. **Extra neighbors matter locally and almost vanish at distance.** k=100 vs k=5: 11.37 vs 1.90 ms on A; 70.11 vs 66.97 ms on B1.
+7. **The distant path is consistently slow.** B1 p95 was 69.55 ms, 2.6 ms above p50.
+
+---
+
+## Figures from this run
+
+Every PNG is generated from `results/*.json`. If a caption and a JSON file disagree, the JSON wins.
+
+![Study design](figures/fig-00-study-design.png)
+
+*Figure 0. One NYC3 client, three paths, identical corpora.*
+
+![TCP vs retrieval vs cold](figures/fig-02-tcp-retrieval-cold.png)
+
+*Figure 2. Path floor, pooled search, and cold first call.*
+
+![top-k payload](figures/fig-03-topk-payload.png)
+
+*Figure 3. k = 5, 20, 100. Payload shows up when the network is already fast.*
+
+![Physics floor vs measured TCP](figures/fig-04-floor-vs-measured-tcp.png)
+
+*Figure 4. Measured TCP sits above the fiber floor. Nothing landed below it.*
+
+![Compounding](figures/fig-05-compounding-measured.png)
+
+*Figure 5. Measured k=5 p50 × hop count. Eight hops on B1 = 536 ms before a token generates.*
+
+![p50 vs p95](figures/fig-06-p50-vs-p95.png)
+
+*Figure 6. Median versus tail at k=5. Consistently slow, not noisy.*
+
+---
 
 ## Reproduce
 
-From a Droplet in the fixed region (NYC recommended):
-
 ```bash
-python3 -m venv venv && source venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# apt install postgresql-client   # for loading
+# on the Droplet: apt install postgresql-client
 
 psql "$DSN_ARM_A" -f harness/load_corpus.sql
 psql "$DSN_ARM_B" -f harness/load_corpus.sql
 
-python3 harness/locality_bench.py --mode tcp --host <private-or-public-host> --port 25060 --out results/a_tcp.json
+python3 harness/locality_bench.py --mode tcp --host <host> --port 25060 --out results/a_tcp.json
 python3 harness/locality_bench.py --mode pgvector --dsn "$DSN_ARM_A" --k 5 --out results/a_k5.json
+
+python3 analysis/plot_results.py
 ```
 
-See the article runbook for trusted sources, VPC peering, and teardown.
+Trusted sources, VPC peering, and teardown are in the article runbook.
 
 ## Honest disclosures
 
-- One time window only (article recommends a second window on another day for production claims).
-- Synthetic random vectors measure the **path**, not recall quality.
-- Smallest DB plan (`db-s-1vcpu-1gb`); ANN time is not the comparison target because both arms share identical index parameters.
-- B3 and Arm C were not executed; cells are left blank rather than estimated.
+- One time window. A second day is the right next measurement, not a different conclusion from this JSON.
+- Synthetic random vectors measure the **path**, not recall.
+- Smallest database plan (`db-s-1vcpu-1gb`). ANN time is not the comparison target; both arms shared index parameters.
+- B3 and Arm C were not executed. Cells stay blank.
+
+## Layout
+
+```
+harness/               locality_bench.py, load_corpus.sql
+results/               raw per-cell JSON from the 2026-08-10 run
+figures/               publication plots rendered from that JSON
+analysis/plot_results.py
+METHODS.md
+```
