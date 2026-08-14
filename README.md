@@ -33,8 +33,6 @@ The conclusion is architectural, not a database bake-off: **co-locate the vector
 | A | Same DC, VPC (NYC3 private) | **2.43 ms** | **1.90 ms** | 3.51 ms | 11.37 ms | 111.34 ms |
 | B1 | NYC3 → SFO3, public | **68.63 ms** | **66.97 ms** | 69.55 ms | 70.11 ms | 717.91 ms |
 | B2 | NYC3 → SFO3, peered VPC | **67.73 ms** | **69.90 ms** | 70.57 ms | 75.44 ms | 668.87 ms |
-| B3 | NYC → SGP, public | *not run* | | | | |
-| C | Third-party SaaS | *not run* | | | | |
 
 ![Pooled retrieval p50 at k=5](figures/fig-01-retrieval-p50-k5.png)
 
